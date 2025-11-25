@@ -3,7 +3,7 @@ import torchvision
 from models.network_v1 import NetworkV1
 from models.network_v2 import NetworkV2
 from models.network_v3 import NetworkV3
-
+from models.network_v4 import NetworkV4
 
 def construct_model(config, num_classes, num_makes, num_types):
     if config['arch'] == 'resnext50':
@@ -17,6 +17,8 @@ def construct_model(config, num_classes, num_makes, num_types):
         model = NetworkV1(base, num_classes)
     elif config['version'] == 2:
         model = NetworkV2(base, num_classes, num_makes, num_types)
+    elif config['version'] == 4:
+        model = NetworkV4(base, num_classes, num_makes, num_types)
     else:
         model = NetworkV3(base, num_classes, num_makes, num_types)
 
