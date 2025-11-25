@@ -126,6 +126,76 @@ def test_v2(model, test_loader, device, config):
     return valres
 
 
+def test_v3(model, test_loader, device, config):
+    model.eval()
+
+    loss_meter = 0
+    acc_meter = 0
+    #make_acc_meter = 0
+    type_acc_meter = 0
+    runcount = 0
+
+    i = 0
+
+    with torch.no_grad():
+        start_time = time.time()
+        for data, target, make_target, type_target in test_loader:
+            data = data.to(device)
+            #target = target.to(device)
+            #make_target = make_target.to(device)
+            type_target = type_target.to(device)
+
+            type_pred = model(data)
+
+            #loss_main = F.cross_entropy(pred, target)
+            #loss_make = F.cross_entropy(make_pred, make_target)
+            loss_type = F.cross_entropy(type_pred, type_target)
+
+            loss = config['type_loss'] * loss_type
+
+            #acc = pred.max(1)[1].eq(target).float().sum()
+            #make_acc = make_pred.max(1)[1].eq(make_target).float().sum()
+            type_acc = type_pred.max(1)[1].eq(type_target).float().sum()
+
+            loss_meter += loss.item() * data.size(0)
+            #acc_meter += acc.item()
+            #make_acc_meter += make_acc.item()
+            type_acc_meter += type_acc.item()
+
+            runcount += data.size(0)
+            i += 1
+            elapsed = time.time() - start_time
+
+            print(f'[{i}/{len(test_loader)}]: '
+                  f'Loss: {loss_meter / runcount:.4f} '
+                  f'Acc: {acc_meter / runcount:.4f} '
+                  #f'Make: {make_acc_meter / runcount:.4f} '
+                  f'Type: {type_acc_meter / runcount:.4f} '
+                  f'({elapsed:.2f}s)', end='\r')
+
+        print()
+
+        elapsed = time.time() - start_time
+
+        loss_meter /= runcount
+        acc_meter /= runcount
+        #make_acc_meter /= runcount
+        type_acc_meter /= runcount
+
+    print(f'Test Result: Loss: {loss_meter:.4f} Type_Acc: {type_acc_meter:.4f} ({elapsed:.2f}s)')
+
+    valres = {
+        'val_loss': loss_meter,
+        'val_acc': acc_meter,
+        #'val_make_acc': make_acc_meter,
+        'val_type_acc': type_acc_meter,
+        'val_time': elapsed
+    }
+
+    return valres
+
+
+
 def load_weight(model, path, device):
     sd = torch.load(path, map_location=device)
     model.load_state_dict(sd)
@@ -168,6 +238,9 @@ if __name__ == '__main__':
     parser.add_argument('--imgsize', default=400, type=int,
                         help='img size for testing (default: 400)')
 
+    args = parser.parse_args()
+
+    main(args)
     args = parser.parse_args()
 
     main(args)
