@@ -10,7 +10,7 @@ import torch.optim as optim
 
 from datasets import load_class_names, prepare_loader, separate_class
 from models import construct_model
-from test import test_v1, test_v2
+from test import test_v1, test_v2, test_v3
 
 
 def train_v2(ep, model, optimizer, lr_scheduler, train_loader, device, config):
@@ -80,6 +80,84 @@ def train_v2(ep, model, optimizer, lr_scheduler, train_loader, device, config):
     }
 
     return trainres
+
+
+
+def train_v3(ep, model, optimizer, lr_scheduler, train_loader, device, config):
+    lr_scheduler.step()
+    model.train()
+
+    loss_meter = 0
+    acc_meter = 0
+    #make_acc_meter = 0
+    type_acc_meter = 0
+
+    i = 0
+
+    start_time = time.time()
+    elapsed = 0
+
+    for data, target, make_target, type_target in train_loader:
+        data = data.to(device)
+        #target = target.to(device)
+        #make_target = make_target.to(device)
+        type_target = type_target.to(device)
+
+        optimizer.zero_grad()
+
+        type_pred = model(data)
+
+        #loss_main = F.cross_entropy(pred, target)
+        #loss_make = F.cross_entropy(make_pred, make_target)
+        loss_type = F.cross_entropy(type_pred, type_target)
+
+        #loss = loss_main + config['make_loss'] * loss_make + config['type_loss'] * loss_type
+        loss = config['type_loss'] * loss_type
+        loss.backward()
+
+        optimizer.step()
+
+        #acc = pred.max(1)[1].eq(target).float().mean()
+        #make_acc = make_pred.max(1)[1].eq(make_target).float().mean()
+        type_acc = type_pred.max(1)[1].eq(type_target).float().mean()
+
+        loss_meter += loss.item()
+        #acc_meter += acc.item()
+        #make_acc_meter += make_acc.item()
+        type_acc_meter += type_acc.item()
+
+        i += 1
+        elapsed = time.time() - start_time
+
+        # print(f'Epoch {ep:03d} [{i}/{len(train_loader)}]: '
+        #       f'Loss: {loss_meter / i:.4f} '
+        #       f'Acc: {acc_meter / i:.4f} '
+        #       f'Make: {make_acc_meter / i:.4f} '
+        #       f'Type: {type_acc_meter / i:.4f} '
+        #       f'({elapsed:.2f}s)', end='\r')
+        print(f'Epoch {ep:03d} [{i}/{len(train_loader)}]: '
+              f'Loss: {loss_meter / i:.4f} '
+              f'Type_Acc: {type_acc_meter / i:.4f} '
+              f'({elapsed:.2f}s)', end='\r')
+
+    print()
+    loss_meter /= len(train_loader)
+    acc_meter /= len(train_loader)
+    #make_acc_meter /= len(train_loader)
+    type_acc_meter /= len(train_loader)
+
+    trainres = {
+        'train_loss': loss_meter,
+        'train_acc': acc_meter,
+        #'train_make_acc': make_acc_meter,
+        'train_type_acc': type_acc_meter,
+        'train_time': elapsed
+    }
+
+    return trainres
+
+
+
 
 
 def train_v1(ep, model, optimizer, lr_scheduler, train_loader, device, config):
@@ -209,6 +287,9 @@ def main(args):
     if config['version'] == 1:
         train_fn = train_v1
         test_fn = test_v1
+    if config['version'] == 4:
+        train_fn = train_v3
+        test_fn = test_v3
     else:  # 2 and 3
         train_fn = train_v2
         test_fn = test_v2
@@ -243,7 +324,7 @@ if __name__ == '__main__':
                         help='Architecture (default: resnext50)')
     parser.add_argument('--imgsize', default=400, type=int,
                         help='Input image size (default: 400)')
-    parser.add_argument('--version', default=1, type=int, choices=[1, 2, 3],
+    parser.add_argument('--version', default=1, type=int, choices=[1, 2, 3, 4],
                         help='Classification version (default: 1)\n'
                              '1. Cars Model only\n'
                              '2. Cars Model + Make + Car Type')
