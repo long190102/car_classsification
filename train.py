@@ -294,20 +294,38 @@ def main(args):
         train_fn = train_v2
         test_fn = test_v2
 
-    for ep in range(1, config['epochs'] + 1):
-        trainres = train_fn(ep, model, optimizer, lr_scheduler, train_loader, device, config)
-        valres = test_fn(model, test_loader, device, config)
-        trainres.update(valres)
 
-        if best_acc < valres['val_acc']:
-            best_acc = valres['val_acc']
-            torch.save(model.state_dict(), exp_dir + '/best.pth')
+    if config['version'] == 4:
+        for ep in range(1, config['epochs'] + 1):
+            trainres = train_fn(ep, model, optimizer, lr_scheduler, train_loader, device, config)
+            valres = test_fn(model, test_loader, device, config)
+            trainres.update(valres)
 
-        res.append(trainres)
+            if best_acc < valres['val_type_acc']:
+                best_acc = valres['val_type_acc']
+                torch.save(model.state_dict(), exp_dir + '/best.pth')
 
-    print(f'Best accuracy: {best_acc:.4f}')
-    res = pd.DataFrame(res)
-    res.to_csv(exp_dir + '/history.csv')
+            res.append(trainres)
+
+        print(f'Best accuracy: {best_acc:.4f}')
+        res = pd.DataFrame(res)
+        res.to_csv(exp_dir + '/history.csv')
+    
+    else:
+        for ep in range(1, config['epochs'] + 1):
+            trainres = train_fn(ep, model, optimizer, lr_scheduler, train_loader, device, config)
+            valres = test_fn(model, test_loader, device, config)
+            trainres.update(valres)
+
+            if best_acc < valres['val_acc']:
+                best_acc = valres['val_acc']
+                torch.save(model.state_dict(), exp_dir + '/best.pth')
+
+            res.append(trainres)
+
+        print(f'Best accuracy: {best_acc:.4f}')
+        res = pd.DataFrame(res)
+        res.to_csv(exp_dir + '/history.csv')
 
 
 if __name__ == '__main__':
@@ -349,3 +367,4 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
     main(args)
+
