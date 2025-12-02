@@ -318,12 +318,15 @@ def main(args):
             trainres.update(valres)
 
             if best_acc < valres['val_acc']:
+                print(f'old acc:{best_acc:.4f}'
+                      f'current acc:{valres[val_acc]:.4f}')
                 best_acc = valres['val_acc']
                 torch.save(model.state_dict(), exp_dir + '/best.pth')
 
             res.append(trainres)
 
         print(f'Best accuracy: {best_acc:.4f}')
+        
         res = pd.DataFrame(res)
         res.to_csv(exp_dir + '/history.csv')
 
